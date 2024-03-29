@@ -1,3 +1,5 @@
+// Package webserver provides functionality of webserver with simple methods
+// to start, gracefully stop, initialise instance.
 package webserver
 
 import (
