@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"sort"
 	"sync"
 )
 
@@ -67,4 +68,36 @@ func (s *State) Insert(shortURL string, longUrl string) error {
 	s.shortToLongMap[shortURL] = u
 	s.domainCountMap[u.Host]++
 	return nil
+}
+
+func (s *State) TopDomainsWithCount(n int) []struct {
+	Domain string `json:"domain"`
+	Count  int64  `json:"count"`
+} {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	var domainCounts []struct {
+		Domain string `json:"domain"`
+		Count  int64  `json:"count"`
+	}
+
+	for domain, count := range s.domainCountMap {
+		domainCounts = append(domainCounts, struct {
+			Domain string `json:"domain"`
+			Count  int64  `json:"count"`
+		}{
+			Domain: domain,
+			Count:  count,
+		})
+	}
+
+	sort.Slice(domainCounts, func(i, j int) bool {
+		return domainCounts[i].Count > domainCounts[j].Count
+	})
+
+	if len(domainCounts) > n {
+		return domainCounts[:n]
+	}
+	return domainCounts
 }

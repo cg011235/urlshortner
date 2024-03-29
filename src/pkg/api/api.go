@@ -97,11 +97,24 @@ func RedirectHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, u.String(), http.StatusFound)
 }
 
+func MetricsHandler(w http.ResponseWriter, r *http.Request) {
+	topDomains := inMemState.TopDomainsWithCount(3)
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(map[string][]struct {
+		Domain string `json:"domain"`
+		Count  int64  `json:"count"`
+	}{"topDomains": topDomains}); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
+}
+
 func NewRouter() http.Handler {
 	r := mux.NewRouter()
 	r.HandleFunc("/", RootHandler).Methods("GET")
 	r.HandleFunc("/shorten", ShortenURLHandler).Methods("POST")
 	r.HandleFunc("/{shorturl}", RedirectHandler).Methods("GET")
+	r.HandleFunc("/metrics", MetricsHandler).Methods("GET")
 	return r
 }
 
