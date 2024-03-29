@@ -1,3 +1,5 @@
-module url_shortner_ica
+module urlshortner
 
 go 1.21.6
+
+require github.com/gorilla/mux v1.8.1
