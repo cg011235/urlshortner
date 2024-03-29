@@ -4,8 +4,14 @@ package state
 
 import (
 	"errors"
+	"fmt"
 	"net/url"
 	"sync"
+)
+
+var (
+	ErrURLParse      = errors.New("error parsing URL")
+	ErrEntryNotFound = errors.New("entry not found")
 )
 
 // State manages mappings between long URLs and short URLs, along with domain counts.
@@ -32,28 +38,28 @@ func (s *State) LookupShort(shortUrl string) (*url.URL, error) {
 	if val, ok := s.shortToLongMap[shortUrl]; ok {
 		return val, nil
 	}
-	return nil, errors.New("entry not found")
+	return nil, ErrEntryNotFound
 }
 
 // LookupLong looks up the short URL for a given long URL and returns it if found.
 func (s *State) LookupLong(longUrl string) (string, error) {
 	u, err := url.Parse(longUrl)
 	if err != nil {
-		return "", err // Return the parsing error to the caller.
+		return "", fmt.Errorf("%w: %v", ErrURLParse, err)
 	}
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	if val, ok := s.longToShortMap[*u]; ok {
 		return val, nil
 	}
-	return "", errors.New("entry not found")
+	return "", ErrEntryNotFound
 }
 
 // Insert creates a mapping from a long URL to a short URL and updates domain counts.
 func (s *State) Insert(shortURL string, longUrl string) error {
 	u, err := url.Parse(longUrl)
 	if err != nil {
-		return err
+		return fmt.Errorf("%w: %v", ErrURLParse, err)
 	}
 	s.mutex.Lock()
 	defer s.mutex.Unlock()

@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -39,19 +40,28 @@ func ShortenURLHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Original URL is missing", http.StatusBadRequest)
 		return
 	}
+	log.Println("Recieved request for original URL: ", req.OriginalURL)
 
-	shortURL, err := state.LookupLong(req.OriginalURL)
+	shortURL, err := inMemState.LookupLong(req.OriginalURL)
 	if err != nil {
-		log.Fatalf("LookupLong failed: %v", err)
+		if errors.Is(err, state.ErrURLParse) {
+			http.Error(w, "Error looking up URL mapping", http.StatusInternalServerError)
+			return
+		} else if errors.Is(err, state.ErrEntryNotFound) {
+			shortURL, err = GenerateShortURL()
+			if err != nil {
+				http.Error(w, "Error generating short URL", http.StatusInternalServerError)
+				return
+			}
+			log.Println("Generated short URL as lookup did not find entry: ", shortURL)
+		} else {
+			http.Error(w, "Error looking up URL mapping", http.StatusInternalServerError)
+			return
+		}
 	} else {
-		return shortURL, err
+		log.Println("Found short URL in lookup: ", shortURL)
 	}
 
-	shortURL, err = GenerateShortURL()
-	if err != nil {
-		http.Error(w, "Error generating short URL", http.StatusInternalServerError)
-		return
-	}
 	if err := inMemState.Insert(shortURL, req.OriginalURL); err != nil {
 		http.Error(w, "Error inserting URL mapping", http.StatusInternalServerError)
 		return
@@ -83,6 +93,7 @@ func RedirectHandler(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	log.Println("Redirecting short url : ", shortURL, " to original url : ", u.String())
 	http.Redirect(w, r, u.String(), http.StatusFound)
 }
 
