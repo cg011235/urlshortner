@@ -40,11 +40,3 @@ func TestState(t *testing.T) {
 		t.Errorf("Expected error when looking up non-existent long URL, got nil")
 	}
 }
-
-func TestURLParsingError(t *testing.T) {
-	state := NewState()
-	invalidURL := "http:///example.com" // Invalid URL
-	if err := state.Insert("short", invalidURL); err == nil {
-		t.Errorf("Expected URL parsing error, got nil")
-	}
-}

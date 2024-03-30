@@ -9,6 +9,7 @@ import (
 
 	"urlshortner/src/pkg/rangecounter"
 	"urlshortner/src/pkg/state"
+	"urlshortner/src/pkg/util"
 
 	"github.com/gorilla/mux"
 )
@@ -41,6 +42,12 @@ func ShortenURLHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Println("Recieved request for original URL: ", req.OriginalURL)
+
+	err := util.ValidateLongURL(req.OriginalURL)
+	if err != nil {
+		http.Error(w, "Error: recieved invalid URL as input", http.StatusBadRequest)
+		return
+	}
 
 	shortURL, err := inMemState.LookupLong(req.OriginalURL)
 	if err != nil {
@@ -88,6 +95,11 @@ func GenerateShortURL() (string, error) {
 func RedirectHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	shortURL := vars["shorturl"]
+	err := util.ValidateShortURL(shortURL)
+	if err != nil {
+		http.Error(w, "Error: recieved invalid URL as input", http.StatusBadRequest)
+		return
+	}
 	u, err := inMemState.LookupShort(shortURL)
 	if err != nil {
 		http.NotFound(w, r)
@@ -118,7 +130,7 @@ func NewRouter() http.Handler {
 	return r
 }
 
-func Init() {
+func Init(min, max int64) {
 	inMemState = state.NewState()
-	rangeManager = rangecounter.NewRangeCounter(0, 1000000)
+	rangeManager = rangecounter.NewRangeCounter(min, max)
 }
